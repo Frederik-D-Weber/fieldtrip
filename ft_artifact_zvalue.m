@@ -37,12 +37,12 @@ function [cfg, artifact] = ft_artifact_zvalue(cfg, data)
 %   cfg.artfctdef.zvalue.artfctpeak  = 'yes' or 'no'
 %   cfg.artfctdef.zvalue.interactive = 'yes' or 'no'
 %
-% If you specify artfctpeak='yes', the maximum value of the artifact within its range
-% will be found and saved into cfg.artfctdef.zvalue.peaks.
+% If you specify cfg.artfctdef.zvalue.artfctpeak='yes', the maximum value of the
+% artifact within its range will be found and saved into cfg.artfctdef.zvalue.peaks.
 %
-% If you specify interactive='yes', a GUI will be started and you can manually
-% accept/reject detected artifacts, and/or change the threshold. To control the
-% graphical interface via keyboard, use the following keys:
+% If you specify cfg.artfctdef.zvalue.interactive='yes', a GUI will be started and
+% you can manually accept/reject detected artifacts, and/or change the threshold. To
+% control the graphical interface via keyboard, use the following keys:
 %
 %     q                 : Stop
 %
@@ -608,6 +608,8 @@ delete(h);
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble provenance
 ft_postamble previous data
+ft_postamble savevar
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
@@ -923,7 +925,7 @@ trlpadsmp = round(artcfg.trlpadding*hdr.Fs);
 channel   = opt.channel;
 
 % determine the channel with the highest z-value to be displayed
-% this is default behaviour but can be overruled in the gui
+% this is default behavior but can be overruled in the gui
 if strcmp(channel, 'artifact')
   [dum, indx] = max(zval);
   sgnind      = zindx(indx);
@@ -1132,30 +1134,3 @@ while p~=0
   p = get(h, 'parent');
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% SUBFUNCTION
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function key = parseKeyboardEvent(eventdata)
-
-key = eventdata.Key;
-
-% handle possible numpad events (different for Windows and UNIX systems)
-% NOTE: shift+numpad number does not work on UNIX, since the shift
-% modifier is always sent for numpad events
-if isunix()
-  shiftInd = match_str(eventdata.Modifier, 'shift');
-  if ~isnan(str2double(eventdata.Character)) && ~isempty(shiftInd)
-    % now we now it was a numpad keystroke (numeric character sent AND
-    % shift modifier present)
-    key = eventdata.Character;
-    eventdata.Modifier(shiftInd) = []; % strip the shift modifier
-  end
-elseif ispc()
-  if strfind(eventdata.Key, 'numpad')
-    key = eventdata.Character;
-  end
-end
-
-if ~isempty(eventdata.Modifier)
-  key = [eventdata.Modifier{1} '+' key];
-end

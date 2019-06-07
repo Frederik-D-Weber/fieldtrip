@@ -1,8 +1,7 @@
-function dat = read_biosemi_bdf(filename, hdr, begsample, endsample, chanindx);
 
-% READ_BIOSEMI_BDF reads specified samples from a BDF continous datafile
+% READ_BIOSEMI_BDF reads specified samples from a BDF continuous datafile
 % It neglects all trial boundaries as if the data was acquired in
-% non-continous mode.
+% non-continuous mode.
 %
 % Use as
 %   [hdr] = read_biosemi_bdf(filename);
@@ -27,9 +26,8 @@ function dat = read_biosemi_bdf(filename, hdr, begsample, endsample, chanindx);
 %    chanindx        index of channels to read (optional, default is all)
 % This returns a Nchans X Nsamples data matrix
 
-% Copyright (C) 2006, Robert Oostenveld
 %
-% This file is part of FieldTrip, see http://www.ru.nl/neuroimaging/fieldtrip
+% This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.
 %
 %    FieldTrip is free software: you can redistribute it and/or modify
@@ -45,7 +43,7 @@ function dat = read_biosemi_bdf(filename, hdr, begsample, endsample, chanindx);
 %    You should have received a copy of the GNU General Public License
 %    along with FieldTrip. If not, see <http://www.gnu.org/licenses/>.
 %
-% $Id: read_biosemi_bdf.m 8119 2013-05-09 12:35:07Z jansch $
+% $Id$
 switch nargin
   case 1
     chanindx=[];
@@ -73,8 +71,9 @@ if nargin==1
   cname=computer;
   if cname(1:2)=='PC' SLASH=BSLASH; end;
 
-  fid=fopen(FILENAME,'r','ieee-le');
-  if fid<0
+  try
+    fid=fopen_or_error(FILENAME,'r','ieee-le');
+  catch err
     fprintf(2,['Error LOADEDF: File ' FILENAME ' not found\n']);
     return;
   end;
@@ -179,9 +178,20 @@ if nargin==1
   EDF.Cal(tmp) = ones(size(tmp));
   EDF.Off(tmp) = zeros(size(tmp));
 
+  % the following adresses https://github.com/fieldtrip/fieldtrip/pull/395
+  tmp = find(strcmpi(cellstr(EDF.Label), 'STATUS'));
+  if EDF.Cal(tmp)~=1
+    timeout = 60*15; % do not show it for the next 15 minutes
+    ft_warning('FieldTrip:BDFCalibration', 'calibration for status channel appears incorrect, setting it to 1', timeout);
+    EDF.Cal(tmp) = 1;
+  end
+  if EDF.Off(tmp)~=0
+    timeout = 60*15; % do not show it for the next 15 minutes
+    ft_warning('FieldTrip:BDFOffset', 'offset for status channel appears incorrect, setting it to 0', timeout);
+    EDF.Off(tmp) = 0;
+  end
+
   EDF.Calib=[EDF.Off';(diag(EDF.Cal))];
-  %EDF.Calib=sparse(diag([1; EDF.Cal]));
-  %EDF.Calib(1,2:EDF.NS+1)=EDF.Off';
 
   EDF.SampleRate = EDF.SPR / EDF.Dur;
 
@@ -201,15 +211,15 @@ if nargin==1
     else
       EDF.ChanTyp(k)=' ';
     end;
-    if findstr(upper(EDF.Label(k,:)),'ECG')
+    if contains(upper(EDF.Label(k,:)),'ECG')
       EDF.ChanTyp(k)='C';
-    elseif findstr(upper(EDF.Label(k,:)),'EKG')
+    elseif contains(upper(EDF.Label(k,:)),'EKG')
       EDF.ChanTyp(k)='C';
-    elseif findstr(upper(EDF.Label(k,:)),'EEG')
+    elseif contains(upper(EDF.Label(k,:)),'EEG')
       EDF.ChanTyp(k)='E';
-    elseif findstr(upper(EDF.Label(k,:)),'EOG')
+    elseif contains(upper(EDF.Label(k,:)),'EOG')
       EDF.ChanTyp(k)='O';
-    elseif findstr(upper(EDF.Label(k,:)),'EMG')
+    elseif contains(upper(EDF.Label(k,:)),'EMG')
       EDF.ChanTyp(k)='M';
     end;
   end;
@@ -235,7 +245,7 @@ if nargin==1
   
   % close the file
   fclose(EDF.FILE.FID);
-  
+
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % convert the header to Fieldtrip-style
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -442,13 +452,13 @@ else
   fp = fopen(filename,'r','ieee-le');
   status = fseek(fp, offset, 'bof');
   if status
-    error(['failed seeking ' filename]);
+    ft_error(['failed seeking ' filename]);
+
   end
   [buf,num] = fread(fp,numwords,'bit24=>double');
   fclose(fp);
   if (num<numwords)
-    error(['failed opening ' filename]);
+
     return
   end
 end
-

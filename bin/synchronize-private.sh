@@ -9,13 +9,15 @@
 ################################################################################
 
 function sync {
-# find the latest file from the list and copies it to all other files
-latest=`ls -t $* | head -n1`
-for file in $*; do
-if [ $file != $latest ] ; then 
-cp $latest $file
-fi
-done
+  # find the latest file from the list and copies it to all other files
+  latest=`ls -t $* 2>/dev/null | head -n1`
+  for file in $*; do
+    if [ -n "$latest" ]; then
+      if [ "$file" != "$latest" ] ; then
+        cp "$latest" "$file"
+      fi
+    fi
+  done
 }
 
 ################################################################################
@@ -27,12 +29,12 @@ ARRAY+=(forward/private/add_mex_source.m)
 sync ${ARRAY[*]}
 
 ################################################################################
-# ama2vol.m
+# ama2headmodel.m
 
 ARRAY=()
-ARRAY+=(external/dipoli/ama2vol.m)
-ARRAY+=(fileio/private/ama2vol.m)
-ARRAY+=(forward/private/ama2vol.m)
+ARRAY+=(external/dipoli/ama2headmodel.m)
+ARRAY+=(fileio/private/ama2headmodel.m)
+ARRAY+=(forward/private/ama2headmodel.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -49,6 +51,14 @@ sync ${ARRAY[*]}
 ARRAY=()
 ARRAY+=(inverse/private/avgref.m)
 ARRAY+=(private/avgref.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# bg_rgba2rgb.m
+
+ARRAY=()
+ARRAY+=(plotting/private/bg_rgba2rgb.m)
+ARRAY+=(private/bg_rgba2rgb.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -139,10 +149,19 @@ ARRAY+=(utilities/private/channelposition.m)
 sync ${ARRAY[*]}
 
 ################################################################################
+# combineClusters.m
+
+ARRAY=()
+ARRAY+=(private/combineClusters.m)
+ARRAY+=(plotting/private/combineClusters.m)
+sync ${ARRAY[*]}
+
+################################################################################
 # combineClusters.mexa64
 
 ARRAY=()
 ARRAY+=(private/combineClusters.mexa64)
+ARRAY+=(plotting/private/combineClusters.mexa64)
 ARRAY+=(src/combineClusters.mexa64)
 sync ${ARRAY[*]}
 
@@ -151,6 +170,7 @@ sync ${ARRAY[*]}
 
 ARRAY=()
 ARRAY+=(private/combineClusters.mexw32)
+ARRAY+=(plotting/private/combineClusters.mexw32)
 ARRAY+=(src/combineClusters.mexw32)
 sync ${ARRAY[*]}
 
@@ -159,6 +179,7 @@ sync ${ARRAY[*]}
 
 ARRAY=()
 ARRAY+=(private/combineClusters.mexw64)
+ARRAY+=(plotting/private/combineClusters.mexw64)
 ARRAY+=(src/combineClusters.mexw64)
 sync ${ARRAY[*]}
 
@@ -236,6 +257,7 @@ ARRAY+=(preproc/private/defaultId.m)
 ARRAY+=(private/defaultId.m)
 ARRAY+=(specest/private/defaultId.m)
 ARRAY+=(statfun/private/defaultId.m)
+ARRAY+=(test/private/defaultId.m)
 ARRAY+=(trialfun/private/defaultId.m)
 ARRAY+=(utilities/private/defaultId.m)
 sync ${ARRAY[*]}
@@ -378,6 +400,7 @@ ARRAY=()
 ARRAY+=(fileio/private/elproj.m)
 ARRAY+=(forward/private/elproj.m)
 ARRAY+=(plotting/private/elproj.m)
+ARRAY+=(test/private/elproj.m)
 ARRAY+=(private/elproj.m)
 sync ${ARRAY[*]}
 
@@ -408,10 +431,19 @@ ARRAY+=(specest/private/filter_with_correction.m)
 sync ${ARRAY[*]}
 
 ################################################################################
+# findcluster.m
+
+ARRAY=()
+ARRAY+=(private/findcluster.m)
+ARRAY+=(plotting/private/findcluster.m)
+sync ${ARRAY[*]}
+
+################################################################################
 # find_innermost_boundary.m
 
 ARRAY=()
 ARRAY+=(external/dipoli/private/find_innermost_boundary.m)
+ARRAY+=(external/openmeeg/private/find_innermost_boundary.m)
 ARRAY+=(forward/private/find_innermost_boundary.m)
 ARRAY+=(inverse/private/find_innermost_boundary.m)
 ARRAY+=(private/find_innermost_boundary.m)
@@ -431,6 +463,7 @@ sync ${ARRAY[*]}
 
 ARRAY=()
 ARRAY+=(external/dipoli/private/find_outermost_boundary.m)
+ARRAY+=(external/openmeeg/private/find_outermost_boundary.m)
 ARRAY+=(fileio/private/find_outermost_boundary.m)
 ARRAY+=(forward/private/find_outermost_boundary.m)
 ARRAY+=(private/find_outermost_boundary.m)
@@ -450,6 +483,7 @@ sync ${ARRAY[*]}
 
 ARRAY=()
 ARRAY+=(forward/private/fitsphere.m)
+ARRAY+=(plotting/private/fitsphere.m)
 ARRAY+=(private/fitsphere.m)
 sync ${ARRAY[*]}
 
@@ -528,6 +562,14 @@ ARRAY=()
 ARRAY+=(fileio/private/fixsampleinfo.m)
 ARRAY+=(private/fixsampleinfo.m)
 ARRAY+=(utilities/private/fixsampleinfo.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# fopen_or_error.m
+
+ARRAY=()
+ARRAY+=(private/fopen_or_error.m)
+ARRAY+=(fileio/private/fopen_or_error.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -686,6 +728,7 @@ sync ${ARRAY[*]}
 
 ARRAY=()
 ARRAY+=(fileio/private/ft_fetch_data.m)
+ARRAY+=(test/private/ft_fetch_data.m)
 ARRAY+=(utilities/ft_fetch_data.m)
 sync ${ARRAY[*]}
 
@@ -834,6 +877,7 @@ ARRAY=()
 ARRAY+=(fileio/private/ft_hastoolbox.m)
 ARRAY+=(forward/private/ft_hastoolbox.m)
 ARRAY+=(inverse/private/ft_hastoolbox.m)
+ARRAY+=(plotting/private/ft_hastoolbox.m)
 ARRAY+=(utilities/ft_hastoolbox.m)
 sync ${ARRAY[*]}
 
@@ -847,11 +891,19 @@ ARRAY+=(utilities/ft_headcoordinates.m)
 sync ${ARRAY[*]}
 
 ################################################################################
-# ft_inside_vol.m
+# ft_inside_headmodel.m
 
 ARRAY=()
-ARRAY+=(forward/ft_inside_vol.m)
-ARRAY+=(inverse/private/ft_inside_vol.m)
+ARRAY+=(forward/ft_inside_headmodel.m)
+ARRAY+=(inverse/private/ft_inside_headmodel.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# ft_inv.m
+
+ARRAY=()
+ARRAY+=(private/ft_inv.m)
+ARRAY+=(inverse/private/ft_inv.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -944,13 +996,13 @@ ARRAY+=(plotting/private/ft_senstype.m)
 sync ${ARRAY[*]}
 
 ################################################################################
-# ft_voltype.m
+# ft_headmodeltype.m
 
 ARRAY=()
-ARRAY+=(fileio/private/ft_voltype.m)
-ARRAY+=(forward/ft_voltype.m)
-ARRAY+=(inverse/private/ft_voltype.m)
-ARRAY+=(plotting/private/ft_voltype.m)
+ARRAY+=(fileio/private/ft_headmodeltype.m)
+ARRAY+=(forward/ft_headmodeltype.m)
+ARRAY+=(inverse/private/ft_headmodeltype.m)
+ARRAY+=(plotting/private/ft_headmodeltype.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -1011,6 +1063,7 @@ sync ${ARRAY[*]}
 ARRAY=()
 ARRAY+=(contrib/nutmegtrip/private/getdimord.m)
 ARRAY+=(fileio/private/getdimord.m)
+ARRAY+=(forward/private/getdimord.m)
 ARRAY+=(private/getdimord.m)
 ARRAY+=(test/private/getdimord.m)
 ARRAY+=(utilities/private/getdimord.m)
@@ -1022,6 +1075,7 @@ sync ${ARRAY[*]}
 ARRAY=()
 ARRAY+=(contrib/nutmegtrip/private/getdimsiz.m)
 ARRAY+=(fileio/private/getdimsiz.m)
+ARRAY+=(forward/private/getdimsiz.m)
 ARRAY+=(private/getdimsiz.m)
 ARRAY+=(test/private/getdimsiz.m)
 ARRAY+=(utilities/private/getdimsiz.m)
@@ -1131,63 +1185,7 @@ ARRAY+=(private/headsurface.m)
 sync ${ARRAY[*]}
 
 ################################################################################
-# icosahedron.m
-
-ARRAY=()
-ARRAY+=(external/openmeeg/icosahedron.m)
-ARRAY+=(forward/private/icosahedron.m)
-ARRAY+=(plotting/private/icosahedron.m)
-ARRAY+=(private/icosahedron.m)
-ARRAY+=(test/private/icosahedron.m)
-ARRAY+=(utilities/private/icosahedron.m)
-sync ${ARRAY[*]}
-
-################################################################################
-# icosahedron162.m
-
-ARRAY=()
-ARRAY+=(external/openmeeg/icosahedron162.m)
-ARRAY+=(forward/private/icosahedron162.m)
-ARRAY+=(plotting/private/icosahedron162.m)
-ARRAY+=(private/icosahedron162.m)
-ARRAY+=(test/private/icosahedron162.m)
-sync ${ARRAY[*]}
-
-################################################################################
-# icosahedron2562.m
-
-ARRAY=()
-ARRAY+=(forward/private/icosahedron2562.m)
-ARRAY+=(plotting/private/icosahedron2562.m)
-ARRAY+=(private/icosahedron2562.m)
-ARRAY+=(test/private/icosahedron2562.m)
-sync ${ARRAY[*]}
-
-################################################################################
-# icosahedron42.m
-
-ARRAY=()
-ARRAY+=(external/openmeeg/icosahedron42.m)
-ARRAY+=(forward/private/icosahedron42.m)
-ARRAY+=(plotting/private/icosahedron42.m)
-ARRAY+=(private/icosahedron42.m)
-ARRAY+=(test/private/icosahedron42.m)
-ARRAY+=(utilities/private/icosahedron42.m)
-sync ${ARRAY[*]}
-
-################################################################################
-# icosahedron642.m
-
-ARRAY=()
-ARRAY+=(external/openmeeg/icosahedron642.m)
-ARRAY+=(forward/private/icosahedron642.m)
-ARRAY+=(plotting/private/icosahedron642.m)
-ARRAY+=(private/icosahedron642.m)
-ARRAY+=(test/private/icosahedron642.m)
-sync ${ARRAY[*]}
-
-################################################################################
-# ignnorefields.m
+# ignorefields.m
 
 ARRAY=()
 ARRAY+=(private/ignorefields.m)
@@ -1317,11 +1315,43 @@ ARRAY+=(src/inv3x3.mexw64)
 sync ${ARRAY[*]}
 
 ################################################################################
+# isdir_or_mkdir.m
+
+ARRAY=()
+ARRAY+=(fileiot/private/isdir_or_mkdir.m)
+ARRAY+=(private/isdir_or_mkdir.m)
+sync ${ARRAY[*]}
+
+################################################################################
 # isalmostequal.m
 
 ARRAY=()
 ARRAY+=(test/private/isalmostequal.m)
 ARRAY+=(private/isalmostequal.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# isfile.m
+
+ARRAY=()
+ARRAY+=(compat/matlablt2017b/isfile.m)
+ARRAY+=(compat/octave/isfile.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# isfolder.m
+
+ARRAY=()
+ARRAY+=(compat/matlablt2017b/isfolder.m)
+ARRAY+=(compat/octave/isfolder.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# ismatch.m
+
+ARRAY=()
+ARRAY+=(private/ismatch.m)
+ARRAY+=(trialfun/private/ismatch.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -1403,14 +1433,6 @@ ARRAY=()
 ARRAY+=(plotting/private/keyvalcheck.m)
 ARRAY+=(specest/private/keyvalcheck.m)
 ARRAY+=(utilities/keyvalcheck.m)
-sync ${ARRAY[*]}
-
-################################################################################
-# ksphere.m
-
-ARRAY=()
-ARRAY+=(forward/private/ksphere.m)
-ARRAY+=(private/ksphere.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -1723,6 +1745,62 @@ ARRAY=()
 ARRAY+=(private/mesh2edge.m)
 ARRAY+=(forward/private/mesh2edge.m)
 ARRAY+=(plotting/private/mesh2edge.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# mesh_icosahedron.m
+
+ARRAY=()
+ARRAY+=(external/openmeeg/mesh_icosahedron.m)
+ARRAY+=(external/bemcp/mesh_icosahedron.m)
+ARRAY+=(external/dipoli/mesh_icosahedron.m)
+ARRAY+=(forward/private/mesh_icosahedron.m)
+ARRAY+=(plotting/private/mesh_icosahedron.m)
+ARRAY+=(private/mesh_icosahedron.m)
+ARRAY+=(test/private/mesh_icosahedron.m)
+ARRAY+=(utilities/private/mesh_icosahedron.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# mesh_octahedron.m
+
+ARRAY=()
+ARRAY+=(external/openmeeg/mesh_octahedron.m)
+ARRAY+=(external/bemcp/mesh_octahedron.m)
+ARRAY+=(external/dipoli/mesh_octahedron.m)
+ARRAY+=(forward/private/mesh_octahedron.m)
+ARRAY+=(plotting/private/mesh_octahedron.m)
+ARRAY+=(private/mesh_octahedron.m)
+ARRAY+=(test/private/mesh_octahedron.m)
+ARRAY+=(utilities/private/mesh_octahedron.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# mesh_sphere.m
+
+ARRAY=()
+ARRAY+=(external/openmeeg/mesh_sphere.m)
+ARRAY+=(external/bemcp/mesh_sphere.m)
+ARRAY+=(external/dipoli/mesh_sphere.m)
+ARRAY+=(forward/private/mesh_sphere.m)
+ARRAY+=(plotting/private/mesh_sphere.m)
+ARRAY+=(private/mesh_sphere.m)
+ARRAY+=(test/private/mesh_sphere.m)
+ARRAY+=(utilities/private/mesh_sphere.m)
+sync ${ARRAY[*]}
+
+################################################################################
+# mesh_tetrahedron.m
+
+ARRAY=()
+ARRAY+=(external/openmeeg/mesh_tetrahedron.m)
+ARRAY+=(external/bemcp/mesh_tetrahedron.m)
+ARRAY+=(external/dipoli/mesh_tetrahedron.m)
+ARRAY+=(forward/private/mesh_tetrahedron.m)
+ARRAY+=(plotting/private/mesh_tetrahedron.m)
+ARRAY+=(private/mesh_tetrahedron.m)
+ARRAY+=(test/private/mesh_tetrahedron.m)
+ARRAY+=(utilities/private/mesh_tetrahedron.m)
 sync ${ARRAY[*]}
 
 ################################################################################
@@ -2282,7 +2360,9 @@ sync ${ARRAY[*]}
 # normals.m
 
 ARRAY=()
+ARRAY+=(fileio/private/normals.m)
 ARRAY+=(forward/private/normals.m)
+ARRAY+=(plotting/private/normals.m)
 ARRAY+=(private/normals.m)
 ARRAY+=(test/private/normals.m)
 sync ${ARRAY[*]}
@@ -2786,6 +2866,7 @@ sync ${ARRAY[*]}
 ARRAY=()
 ARRAY+=(external/openmeeg/private/refine.m)
 ARRAY+=(plotting/private/refine.m)
+ARRAY+=(fileio/private/refine.m)
 ARRAY+=(private/refine.m)
 ARRAY+=(test/private/refine.m)
 ARRAY+=(utilities/private/refine.m)
@@ -3223,6 +3304,7 @@ ARRAY+=(external/openmeeg/private/solid_angle.m)
 ARRAY+=(fileio/private/solid_angle.m)
 ARRAY+=(forward/private/solid_angle.m)
 ARRAY+=(inverse/private/solid_angle.m)
+ARRAY+=(plotting/private/solid_angle.m)
 ARRAY+=(private/solid_angle.m)
 ARRAY+=(src/solid_angle.m)
 sync ${ARRAY[*]}
@@ -3236,6 +3318,7 @@ ARRAY+=(external/openmeeg/private/solid_angle.mexa64)
 ARRAY+=(fileio/private/solid_angle.mexa64)
 ARRAY+=(forward/private/solid_angle.mexa64)
 ARRAY+=(inverse/private/solid_angle.mexa64)
+ARRAY+=(plotting/private/solid_angle.mexa64)
 ARRAY+=(private/solid_angle.mexa64)
 ARRAY+=(src/solid_angle.mexa64)
 sync ${ARRAY[*]}
@@ -3248,6 +3331,7 @@ ARRAY+=(external/dipoli/private/solid_angle.mexglx)
 ARRAY+=(external/openmeeg/private/solid_angle.mexglx)
 ARRAY+=(forward/private/solid_angle.mexglx)
 ARRAY+=(inverse/private/solid_angle.mexglx)
+ARRAY+=(plotting/private/solid_angle.mexglx)
 ARRAY+=(private/solid_angle.mexglx)
 ARRAY+=(src/solid_angle.mexglx)
 sync ${ARRAY[*]}
@@ -3260,6 +3344,7 @@ ARRAY+=(external/dipoli/private/solid_angle.mexmac)
 ARRAY+=(external/openmeeg/private/solid_angle.mexmac)
 ARRAY+=(forward/private/solid_angle.mexmac)
 ARRAY+=(inverse/private/solid_angle.mexmac)
+ARRAY+=(plotting/private/solid_angle.mexmac)
 ARRAY+=(private/solid_angle.mexmac)
 ARRAY+=(src/solid_angle.mexmac)
 sync ${ARRAY[*]}
@@ -3272,6 +3357,7 @@ ARRAY+=(external/dipoli/private/solid_angle.mexmaci)
 ARRAY+=(external/openmeeg/private/solid_angle.mexmaci)
 ARRAY+=(forward/private/solid_angle.mexmaci)
 ARRAY+=(inverse/private/solid_angle.mexmaci)
+ARRAY+=(plotting/private/solid_angle.mexmaci)
 ARRAY+=(private/solid_angle.mexmaci)
 ARRAY+=(src/solid_angle.mexmaci)
 sync ${ARRAY[*]}
@@ -3284,6 +3370,7 @@ ARRAY+=(external/dipoli/private/solid_angle.mexmaci64)
 ARRAY+=(external/openmeeg/private/solid_angle.mexmaci64)
 ARRAY+=(forward/private/solid_angle.mexmaci64)
 ARRAY+=(inverse/private/solid_angle.mexmaci64)
+ARRAY+=(plotting/private/solid_angle.mexmaci64)
 ARRAY+=(private/solid_angle.mexmaci64)
 ARRAY+=(src/solid_angle.mexmaci64)
 sync ${ARRAY[*]}
@@ -3296,6 +3383,7 @@ ARRAY+=(external/dipoli/private/solid_angle.mexw32)
 ARRAY+=(external/openmeeg/private/solid_angle.mexw32)
 ARRAY+=(forward/private/solid_angle.mexw32)
 ARRAY+=(inverse/private/solid_angle.mexw32)
+ARRAY+=(plotting/private/solid_angle.mexw32)
 ARRAY+=(private/solid_angle.mexw32)
 ARRAY+=(src/solid_angle.mexw32)
 sync ${ARRAY[*]}
@@ -3308,6 +3396,7 @@ ARRAY+=(external/dipoli/private/solid_angle.mexw64)
 ARRAY+=(external/openmeeg/private/solid_angle.mexw64)
 ARRAY+=(forward/private/solid_angle.mexw64)
 ARRAY+=(inverse/private/solid_angle.mexw64)
+ARRAY+=(plotting/private/solid_angle.mexw64)
 ARRAY+=(private/solid_angle.mexw64)
 ARRAY+=(src/solid_angle.mexw64)
 sync ${ARRAY[*]}
@@ -3341,6 +3430,7 @@ sync ${ARRAY[*]}
 
 ARRAY=()
 ARRAY+=(forward/private/surfaceorientation.m)
+ARRAY+=(plotting/private/surfaceorientation.m)
 ARRAY+=(private/surfaceorientation.m)
 sync ${ARRAY[*]}
 
@@ -3382,6 +3472,15 @@ ARRAY+=(plotting/private/translate.m)
 ARRAY+=(private/translate.m)
 ARRAY+=(utilities/private/translate.m)
 sync ${ARRAY[*]}
+
+################################################################################
+# triangle2connectivity.m
+
+ARRAY=()
+ARRAY+=(private/triangle2connectivity.m)
+ARRAY+=(plotting/private/triangle2connectivity.m)
+sync ${ARRAY[*]}
+
 
 ################################################################################
 # triangle4pt.m
@@ -3497,4 +3596,3 @@ ARRAY=()
 ARRAY+=(fileio/private/write_ctf_shm.mexglx)
 ARRAY+=(src/write_ctf_shm.mexglx)
 sync ${ARRAY[*]}
-

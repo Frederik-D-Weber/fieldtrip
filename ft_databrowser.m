@@ -26,33 +26,25 @@ function [cfg] = ft_databrowser(cfg, data)
 %   cfg.zlim                    = color scaling to apply to component topographies, 'minmax', 'maxabs' (default = 'maxmin')
 %   cfg.blocksize               = duration in seconds for cutting the data up
 %   cfg.trl                     = structure that defines the data segments of interest, only applicable for trial-based data
-%   cfg.continuous              = 'yes' or 'no' whether the data should be interpreted as continuous or trial-based
+%   cfg.continuous              = 'yes' or 'no', whether the data should be interpreted as continuous or trial-based
+%   cfg.allowoverlap            = 'yes' or 'no', whether data that is overlapping in multiple trials is allowed (default = 'no')
 %   cfg.channel                 = cell-array with channel labels, see FT_CHANNELSELECTION
-%   cfg.channelclamped          = cell-array with channel labels, that (when using the 'vertical' viewmode) will always be
-%                                 shown at the bottom. This is useful for showing ECG/EOG channels along with the other channels
-%   cfg.plotlabels              = 'yes' (default), 'no', 'some'; whether to plot channel labels in vertical
-%                                 viewmode ('some' plots one in every ten labels; useful when plotting a
-%                                 large number of channels at a time)
+%   cfg.channelclamped          = cell-array with channel labels, that (when using the 'vertical' viewmode) will always be shown at the bottom. This is useful for showing ECG/EOG channels along with the other channels
+%   cfg.plotlabels              = 'yes', 'no' or 'some', whether to plot channel labels in vertical viewmode. The option 'some' plots one label for every ten channels, which is useful if there are many channels. (default = 'yes')
 %   cfg.ploteventlabels         = 'type=value', 'colorvalue' (default = 'type=value');
 %   cfg.plotevents              = 'no' or 'yes', whether to plot event markers. (default is 'yes')
 %   cfg.viewmode                = string, 'butterfly', 'vertical', 'component' for visualizing ICA/PCA components (default is 'butterfly')
 %   cfg.artfctdef.xxx.artifact  = Nx2 matrix with artifact segments see FT_ARTIFACT_xxx functions
 %   cfg.selectfeature           = string, name of feature to be selected/added (default = 'visual')
 %   cfg.selectmode              = 'markartifact', 'markpeakevent', 'marktroughevent' (default = 'markartifact')
-%   cfg.colorgroups             = 'sequential' 'allblack' 'labelcharx' (x = xth character in label), 'chantype' or
-%                                  vector with length(data/hdr.label) defining groups (default = 'sequential')
+%   cfg.colorgroups             = 'sequential' 'allblack' 'labelcharx' (x = xth character in label), 'chantype' or vector with length(data/hdr.label) defining groups (default = 'sequential')
 %   cfg.channelcolormap         = COLORMAP (default = customized lines map with 15 colors)
-%   cfg.verticalpadding         = number or 'auto', padding to be added to top and bottom of plot to avoid channels largely
-%                                 dissappearing when viewmode = 'vertical'/'component'  (default = 'auto'). The padding is
-%                                 expressed as a proportion of the total height added to the top and bottom. The setting 'auto'
-%                                 determines the padding depending on the number of channels that are being plotted.
-%   cfg.selfun                  = string, name of function that is evaluated using the right-click context menu. The selected
-%                                 data and cfg.selcfg are passed on to this function.
+%   cfg.verticalpadding         = number or 'auto', padding to be added to top and bottom of plot to avoid channels largely dissappearing when viewmode = 'vertical'/'component'  (default = 'auto'). The padding is expressed as a proportion of the total height added to the top and bottom. The setting 'auto' determines the padding depending on the number of channels that are being plotted.
+%   cfg.selfun                  = string, name of function that is evaluated using the right-click context menu. The selected data and cfg.selcfg are passed on to this function.
 %   cfg.selcfg                  = configuration options for function in cfg.selfun
-%   cfg.seldat                  = 'selected' or 'all', specifies whether only the currently selected or all channels will
-%                                 be passed to the selfun (default = 'selected')
-%   cfg.renderer                = string, 'opengl', 'zbuffer', 'painters', see MATLAB Figure Properties. If the databrowser
-%                                 crashes, you should try 'painters'.
+%   cfg.seldat                  = 'selected' or 'all', specifies whether only the currently selected or all channels will be passed to the selfun (default = 'selected')
+%   cfg.renderer                = string, 'opengl', 'zbuffer', 'painters', see MATLAB Figure Properties. If this function crashes, you should try 'painters'.
+%   cfg.position                = location and size of the figure, specified as a vector of the form [left bottom width height].
 %
 % The following options for the scaling of the EEG, EOG, ECG, EMG and MEG channels is
 % optional and can be used to bring the absolute numbers of the different channel
@@ -68,8 +60,7 @@ function [cfg] = ft_databrowser(cfg, data)
 %   cfg.mychanscale             = number, scaling to apply to the channels specified in cfg.mychan
 %   cfg.mychan                  = Nx1 cell-array with selection of channels
 %   cfg.chanscale               = Nx1 vector with scaling factors, one per channel specified in cfg.channel
-%   cfg.compscale               = string, 'global' or 'local', defines whether the colormap for the topographic scaling is
-%                                 applied per topography or on all visualized components (default 'global')
+%   cfg.compscale               = string, 'global' or 'local', defines whether the colormap for the topographic scaling is applied per topography or on all visualized components (default 'global')
 %
 % You can specify preprocessing options that are to be applied to the  data prior to
 % display. Most options from FT_PREPROCESSING are supported. They should be specified
@@ -84,10 +75,8 @@ function [cfg] = ft_databrowser(cfg, data)
 % attempt is made to construct one from the sensor definition that is present in the
 % data or specified in the configuration.
 %   cfg.layout                  = filename of the layout, see FT_PREPARE_LAYOUT
-%   cfg.elec                    = structure with electrode positions, see FT_DATATYPE_SENS
-%   cfg.grad                    = structure with gradiometer definition, see FT_DATATYPE_SENS
-%   cfg.elecfile                = name of file containing the electrode positions, see FT_READ_SENS
-%   cfg.gradfile                = name of file containing the gradiometer definition, see FT_READ_SENS
+%   cfg.elec                    = structure with electrode positions or filename, see FT_READ_SENS
+%   cfg.grad                    = structure with gradiometer definition or filename, see FT_READ_SENS
 %
 % The default font size might be too small or too large, depending on the number of
 % channels. You can use the following options to change the size of text inside the
@@ -168,11 +157,14 @@ end
 hasdata = exist('data', 'var');
 hascomp = hasdata && ft_datatype(data, 'comp'); % can be 'raw+comp' or 'timelock+comp'
 
-% for backward compatibility
+% check if the input cfg is valid for this function
 cfg = ft_checkconfig(cfg, 'unused',     {'comps', 'inputfile', 'outputfile'});
 cfg = ft_checkconfig(cfg, 'renamed',    {'zscale', 'ylim'});
 cfg = ft_checkconfig(cfg, 'renamedval', {'ylim', 'auto', 'maxabs'});
 cfg = ft_checkconfig(cfg, 'renamedval', {'selectmode', 'mark', 'markartifact'});
+cfg = ft_checkconfig(cfg, 'renamed',    {'elecfile', 'elec'});
+cfg = ft_checkconfig(cfg, 'renamed',    {'gradfile', 'grad'});
+cfg = ft_checkconfig(cfg, 'renamed',    {'optofile', 'opto'});
 
 % ensure that the preproc specific options are located in the cfg.preproc substructure
 cfg = ft_checkconfig(cfg, 'createsubcfg',  {'preproc'});
@@ -218,6 +210,9 @@ cfg.axisfontunits   = ft_getopt(cfg, 'axisfontunits', 'points');     % inches, c
 cfg.linewidth       = ft_getopt(cfg, 'linewidth', 0.5);
 cfg.verticalpadding = ft_getopt(cfg, 'verticalpadding', 'auto');
 cfg.artifactalpha   = ft_getopt(cfg, 'artifactalpha', 0.2);          % for the opacity of marked artifacts
+cfg.allowoverlap    = ft_getopt(cfg, 'allowoverlap', 'no');          % for ft_fetch_data
+cfg.contournum      = ft_getopt(cfg, 'contournum', 0);               % topoplot contour lines
+cfg.trl             = ft_getopt(cfg, 'trl');
 
 if ~isfield(cfg, 'viewmode')
   % butterfly, vertical, component
@@ -261,18 +256,11 @@ end
 
 if strcmp(cfg.viewmode, 'component')
   % read or create the layout that will be used for the topoplots
-  
-  if ~isempty(cfg.layout)
-    tmpcfg = keepfields(cfg, {'layout', 'showcallinfo'});
-    cfg.layout = ft_prepare_layout(tmpcfg);
+  tmpcfg = keepfields(cfg, {'layout', 'rows', 'columns', 'commentpos', 'scalepos', 'elec', 'grad', 'opto', 'showcallinfo'});
+  if hasdata
+    cfg.layout = ft_prepare_layout(tmpcfg, data);
   else
-    ft_warning('No layout specified - will try to construct one using sensor positions');
-    tmpcfg = keepfields(cfg, {'elec','grad','elecfile','gradfile','showcallinfo'});
-    if hasdata
-      cfg.layout = ft_prepare_layout(tmpcfg, data);
-    else
-      cfg.layout = ft_prepare_layout(tmpcfg);
-    end
+    cfg.layout = ft_prepare_layout(tmpcfg);
   end
 end
 
@@ -283,6 +271,13 @@ end
 if hasdata
   % save whether data came from a timelock structure
   istimelock = strcmp(ft_datatype(data), 'timelock');
+  
+  if ~isempty(cfg.trl)
+    % reduce the input data to the requested trial segments
+    tmpcfg = keepfields(cfg, {'trl'});
+    data = ft_redefinetrial(tmpcfg, data);
+    [cfg, data] = rollback_provenance(cfg, data);
+  end
   
   % check if the input data is valid for this function
   data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'feedback', 'yes', 'hassampleinfo', 'yes');
@@ -317,13 +312,13 @@ if hasdata
     end
   else
     if strcmp(cfg.continuous, 'yes') && (numel(data.trial) > 1)
-      ft_warning('interpreting trial-based data as continous, time-axis is no longer appropriate. t(0) now corresponds to the first sample of the first trial, and t(end) to the last sample of the last trial')
+      ft_warning('interpreting trial-based data as continuous, time-axis is no longer appropriate. t(0) now corresponds to the first sample of the first trial, and t(end) to the last sample of the last trial')
     end
   end
   
   % this is how the input data is segmented
-  trlorg = zeros(numel(data.trial), 3);
-  trlorg(:, [1 2]) = data.sampleinfo;
+  trlorg = data.sampleinfo;
+  trlorg(:,3) = 0;
   
   % recreate offset vector (databrowser depends on this for visualisation)
   for ntrl = 1:numel(data.trial)
@@ -366,16 +361,19 @@ else
     Ntrials = hdr.nTrials;
   end
   
-  % FIXME in case of continuous=yes the trl should be [1 hdr.nSamples*nTrials 0]
-  % and a scrollbar should be used
-  
-  % construct trl-matrix for data from file on disk
-  trlorg = zeros(Ntrials,3);
-  if strcmp(cfg.continuous, 'yes')
-    trlorg(1, [1 2]) = [1 hdr.nSamples*hdr.nTrials];
+  % construct trl-matrix for the data on disk
+  if ~isempty(cfg.trl)
+    % take the one specified by the user
+    trlorg = cfg.trl;
   else
-    for k = 1:Ntrials
-      trlorg(k, [1 2]) = [1 hdr.nSamples] + [hdr.nSamples hdr.nSamples] .* (k-1);
+    % make one that is according to the segments/trials in the data on disk
+    trlorg = zeros(Ntrials,3);
+    if strcmp(cfg.continuous, 'yes')
+      trlorg(1, [1 2]) = [1 hdr.nSamples*hdr.nTrials];
+    else
+      for k = 1:Ntrials
+        trlorg(k, [1 2]) = [1 hdr.nSamples] + [hdr.nSamples hdr.nSamples] .* (k-1);
+      end
     end
   end
 end % if hasdata
@@ -391,8 +389,7 @@ if cfg.blocksize<round(10*1/hdr.Fs)
   cfg.blocksize = round(10*1/hdr.Fs);
 end
 
-
-% FIXME make a check for the consistency of cfg.continous, cfg.blocksize, cfg.trl and the data header
+% FIXME make a check for the consistency of cfg.continuous, cfg.blocksize, cfg.trl and the data header
 
 if Nchans == 0
   ft_error('no channels to display');
@@ -403,7 +400,7 @@ if Ntrials == 0
 end
 
 if ischar(cfg.selectfeature)
-  % ensure that it is a cell array
+  % ensure that it is a cell-array
   cfg.selectfeature = {cfg.selectfeature};
 end
 if ~isempty(cfg.selectfeature)
@@ -561,48 +558,42 @@ end
 
 % cfg.selfun - labels that are presented in rightclick menu, and is appended using ft_getuserfun(..., 'browse') later on to create a function handle
 % cfg.selcfg - cfgs for functions to be executed
-defselfun = {};
-defselcfg = {};
 
-
-% add defselfuns to user-specified defselfuns
-if ~iscell(cfg.selfun) && ~isempty(cfg.selfun)
-  cfg.selfun = {cfg.selfun};
-  cfg.selfun = [cfg.selfun defselfun];
-  % do the same for the cfgs
-  cfg.selcfg = {cfg.selcfg}; % assume the cfg is not a cell-array
-  cfg.selcfg = [cfg.selcfg defselcfg];
-else
+if ~isempty(cfg.selfun) || ~isempty(cfg.selcfg)
+  if ischar(cfg.selfun)
+    cfg.selfun = {cfg.selfun};
+  end
+  if isstruct(cfg.selcfg)
+    cfg.selcfg = {cfg.selcfg};
+  end
+elseif isempty(cfg.selfun) && isempty(cfg.selcfg)
   % simplefft
-  defselcfg{1} = [];
-  defselcfg{1}.chancolors = chancolors;
-  defselfun{1} = 'simpleFFT';
+  cfg.selcfg{1} = [];
+  cfg.selcfg{1}.chancolors = chancolors;
+  cfg.selfun{1} = 'simpleFFT';
   % multiplotER
-  defselcfg{2} = [];
-  defselcfg{2}.layout = cfg.layout;
-  defselfun{2} = 'multiplotER';
+  cfg.selcfg{2} = [];
+  cfg.selcfg{2}.layout = cfg.layout;
+  cfg.selfun{2} = 'multiplotER';
   % topoplotER
-  defselcfg{3} = [];
-  defselcfg{3}.layout = cfg.layout;
-  defselfun{3} = 'topoplotER';
+  cfg.selcfg{3} = [];
+  cfg.selcfg{3}.layout = cfg.layout;
+  cfg.selfun{3} = 'topoplotER';
   % topoplotVAR
-  defselcfg{4} = [];
-  defselcfg{4}.layout = cfg.layout;
-  defselfun{4} = 'topoplotVAR';
+  cfg.selcfg{4} = [];
+  cfg.selcfg{4}.layout = cfg.layout;
+  cfg.selfun{4} = 'topoplotVAR';
   % movieplotER
-  defselcfg{5} = [];
-  defselcfg{5}.layout      = cfg.layout;
-  defselcfg{5}.interactive = 'yes';
-  defselfun{5} = 'movieplotER';
+  cfg.selcfg{5} = [];
+  cfg.selcfg{5}.layout = cfg.layout;
+  cfg.selcfg{5}.interactive = 'yes';
+  cfg.selfun{5} = 'movieplotER';
   % audiovideo
-  defselcfg{6} = [];
-  defselcfg{6}.audiofile = ft_getopt(cfg, 'audiofile');
-  defselcfg{6}.videofile = ft_getopt(cfg, 'videofile');
-  defselcfg{6}.anonimize = ft_getopt(cfg, 'anonimize');
-  defselfun{6} = 'audiovideo';
-  
-  cfg.selfun = defselfun;
-  cfg.selcfg = defselcfg;
+  cfg.selcfg{6} = [];
+  cfg.selcfg{6}.audiofile = ft_getopt(cfg, 'audiofile');
+  cfg.selcfg{6}.videofile = ft_getopt(cfg, 'videofile');
+  cfg.selcfg{6}.anonimize = ft_getopt(cfg, 'anonimize');
+  cfg.selfun{6} = 'audiovideo';
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -621,7 +612,7 @@ opt = [];
 if hasdata
   opt.orgdata   = data;
 else
-  opt.orgdata   = [];      % this means that it will look in cfg.dataset
+  opt.orgdata   = [];      % this means that it will read from cfg.dataset
 end
 if strcmp(cfg.continuous, 'yes')
   opt.trialviewtype = 'segment';
@@ -632,7 +623,7 @@ opt.artdata     = artdata;
 opt.hdr         = hdr;
 opt.event       = event;
 opt.trlop       = 1;          % the active trial being displayed
-opt.ftsel       = find(strcmp(artlabel,cfg.selectfeature)); % current artifact/feature being selected
+opt.ftsel       = find(strcmp(artlabel, cfg.selectfeature)); % current artifact/feature being selected
 opt.trlorg      = trlorg;
 opt.fsample     = hdr.Fs;
 opt.artifactcolors = [0.9686 0.7608 0.7686; 0.7529 0.7098 0.9647; 0.7373 0.9725 0.6824; 0.8118 0.8118 0.8118; 0.9725 0.6745 0.4784; 0.9765 0.9176 0.5686; 0.6863 1 1; 1 0.6863 1; 0 1 0.6000];
@@ -642,7 +633,7 @@ opt.chanindx    = [];         % this is used to check whether the component topo
 opt.eventtypes  = eventtypes;
 opt.eventtypescolors = [0 0 0; 1 0 0; 0 0 1; 0 1 0; 1 0 1; 0.5 0.5 0.5; 0 1 1; 1 1 0];
 opt.eventtypecolorlabels = {'black', 'red', 'blue', 'green', 'cyan', 'grey', 'light blue', 'yellow'};
-opt.nanpaddata  = []; % this is used to allow horizontal scaling to be constant (when looking at last segment continous data, or when looking at segmented/zoomed-out non-continous data)
+opt.nanpaddata  = []; % this is used to allow horizontal scaling to be constant (when looking at last segment continuous data, or when looking at segmented/zoomed-out non-continuous data)
 opt.trllock     = []; % this is used when zooming into trial based data
 
 % save original layout when viewmode = component
@@ -663,7 +654,11 @@ end
 opt.changedchanflg = true; % trigger for redrawing channel labels and preparing layout again (see bug 2065 and 2878)
 
 % create fig
-h = figure;
+if isfield(cfg, 'position')
+  h = figure('Position', cfg.position);
+else
+  h = figure;
+end
 
 % put appdata in figure
 setappdata(h, 'opt', opt);
@@ -677,7 +672,7 @@ set(h, 'Interruptible', 'off', 'BusyAction', 'queue'); % enforce busyaction to q
 
 % enable custom data cursor text
 dcm = datacursormode(h);
-set(dcm, 'updatefcn', @datacursortext);
+set(dcm, 'updatefcn', @cb_datacursortext);
 
 % set the figure window title
 funcname = mfilename();
@@ -832,13 +827,18 @@ if nargout
   % add the update event to the output cfg
   cfg.event = opt.event;
   
-  % do the general cleanup and bookkeeping at the end of the function
-  ft_postamble debug
-  ft_postamble trackconfig
-  ft_postamble previous data
-  ft_postamble provenance
-  
 end % if nargout
+
+% do the general cleanup and bookkeeping at the end of the function
+ft_postamble debug
+ft_postamble trackconfig
+ft_postamble previous data
+ft_postamble provenance
+ft_postamble hastoolbox
+
+if ~nargout
+  clear cfg
+end
 
 end % main function
 
@@ -859,6 +859,7 @@ end
 function definetrial_cb(h, eventdata)
 opt = getappdata(h, 'opt');
 cfg = getappdata(h, 'cfg');
+
 if strcmp(cfg.continuous, 'no')
   
   % when zooming in, lock the trial! one can only go to the next trial when horizontal scaling doesn't segment the data - from ft-meeting: this might be relaxed later on - roevdmei
@@ -937,6 +938,7 @@ if strcmp(cfg.continuous, 'no')
   
   % save trlvis
   opt.trlvis  = trlvis;
+  
 else
   % construct a trial definition for visualisation
   if isfield(opt, 'trlvis') % if present, remember where we were
@@ -1254,8 +1256,9 @@ if (isempty(eventdata) && ft_platform_supports('matlabversion',-Inf, '2014a')) |
   key = get(h, 'userdata');
 else
   % determine the key that was pressed on the keyboard
-  key = parseKeyboardEvent(eventdata);
+  key = parsekeyboardevent(eventdata);
 end
+
 % get focus back to figure
 if ~strcmp(get(h, 'type'), 'figure')
   set(h, 'enable', 'off');
@@ -1660,9 +1663,9 @@ else
 end
 
 if isempty(opt.orgdata)
-  dat = ft_read_data(cfg.datafile, 'header', opt.hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx, 'checkboundary', strcmp(cfg.continuous, 'no'), 'dataformat', cfg.dataformat, 'headerformat', cfg.headerformat);
+  dat = ft_read_data(cfg.datafile, 'header', opt.hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx, 'checkboundary', ~istrue(cfg.continuous), 'dataformat', cfg.dataformat, 'headerformat', cfg.headerformat);
 else
-  dat = ft_fetch_data(opt.orgdata, 'header', opt.hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx, 'allowoverlap', true); % ALLOWING OVERLAPPING TRIALS
+  dat = ft_fetch_data(opt.orgdata, 'header', opt.hdr, 'begsample', begsample, 'endsample', endsample, 'chanindx', chanindx, 'allowoverlap', istrue(cfg.allowoverlap));
 end
 art = ft_fetch_data(opt.artdata, 'begsample', begsample, 'endsample', endsample);
 
@@ -1692,7 +1695,7 @@ opt.curdata.sampleinfo = [begsample endsample];
 clear lab tim dat
 
 fn = fieldnames(cfg);
-tmpcfg = keepfields(cfg, fn(contains(fn, 'scale') | contains(fn, 'mychan')));
+tmpcfg = keepfields(cfg, fn(contains(fn, 'scale') | contains(fn, 'mychan') |  contains(fn, 'channel')));
 tmpcfg.parameter = 'trial';
 opt.curdata = chanscale_common(tmpcfg, opt.curdata);
 
@@ -1719,17 +1722,21 @@ if strcmp(cfg.viewmode, 'butterfly')
 else
   % this needs to be reconstructed if the channel selection changes
   if changedchanflg % trigger for redrawing channel labels and preparing layout again (see bug 2065 and 2878)
-    tmpcfg = [];
+    tmpcfg = keepfields(cfg, {'channel', 'columns', 'rows', 'commentpos', 'scalepos', 'elec', 'grad', 'opto', 'showcallinfo'});
     if strcmp(cfg.viewmode, 'component')
       tmpcfg.layout  = 'vertical';
     else
-      tmpcfg.layout  = cfg.viewmode;
+      tmpcfg.layout = cfg.viewmode;
     end
-    tmpcfg.channel = cfg.channel;
     tmpcfg.skipcomnt = 'yes';
     tmpcfg.skipscale = 'yes';
-    tmpcfg.showcallinfo = 'no';
-    opt.laytime = ft_prepare_layout(tmpcfg, opt.orgdata);
+    if ~isempty(opt.orgdata)
+      % remove the component information from the data
+      tmpdata = ft_checkdata(opt.orgdata, 'datatype', 'raw');
+      opt.laytime = ft_prepare_layout(tmpcfg, tmpdata);
+    else
+      opt.laytime = ft_prepare_layout(tmpcfg);
+    end
   end
 end
 
@@ -1840,7 +1847,7 @@ if strcmp(cfg.plotevents, 'yes')
       lh = ft_plot_line([eventtim(ievent) eventtim(ievent)], [-1 1], 'tag', 'event', 'color', eventcol{ievent}, 'hpos', opt.hpos, 'vpos', opt.vpos, 'width', opt.width, 'height', opt.height, 'hlim', opt.hlim, 'vlim', [-1 1]);
       
       % store this data in the line object so that it can be displayed in the
-      % data cursor (see subfunction datacursortext below)
+      % data cursor (see subfunction cb_datacursortext below)
       setappdata(lh, 'ft_databrowser_linetype', 'event');
       setappdata(lh, 'ft_databrowser_eventtime', eventtim(ievent));
       setappdata(lh, 'ft_databrowser_eventtype', event(ievent).type);
@@ -1923,7 +1930,7 @@ elseif any(strcmp(cfg.viewmode, {'component', 'vertical'}))
       lh = ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', color, 'tag', 'timecourse', 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim, 'linewidth', cfg.linewidth);
       
       % store this data in the line object so that it can be displayed in the
-      % data cursor (see subfunction datacursortext below)
+      % data cursor (see subfunction cb_datacursortext below)
       setappdata(lh, 'ft_databrowser_linetype', 'channel');
       setappdata(lh, 'ft_databrowser_label', opt.hdr.label(chanindx(i)));
       setappdata(lh, 'ft_databrowser_xaxis', tim);
@@ -1991,7 +1998,7 @@ else
       lh = ft_plot_vector(tim, dat(datsel, :), 'box', false, 'color', color, 'tag', 'timecourse', 'hpos', opt.laytime.pos(laysel,1), 'vpos', opt.laytime.pos(laysel,2), 'width', opt.laytime.width(laysel), 'height', opt.laytime.height(laysel), 'hlim', opt.hlim, 'vlim', opt.vlim, 'linewidth', cfg.linewidth);
       
       % store this data in the line object so that it can be displayed in the
-      % data cursor (see subfunction datacursortext below)
+      % data cursor (see subfunction cb_datacursortext below)
       setappdata(lh, 'ft_databrowser_linetype', 'channel');
       setappdata(lh, 'ft_databrowser_label', opt.hdr.label(chanindx(i)));
       setappdata(lh, 'ft_databrowser_xaxis', tim);
@@ -2084,7 +2091,7 @@ if strcmp(cfg.viewmode, 'component')
       % laychan is the actual topo layout, in pixel units for .mat files
       % laytopo is a vertical layout determining where to plot each topo, with one entry per component
       
-      ft_plot_topo(chanx, chany, chanz, 'mask', laychan.mask, 'interplim', 'mask', 'outline', laychan.outline, 'tag', 'topography', 'hpos', laytopo.pos(laysel,1)-laytopo.width(laysel)/2, 'vpos', laytopo.pos(laysel,2)-laytopo.height(laysel)/2, 'width', laytopo.width(laysel), 'height', laytopo.height(laysel), 'gridscale', 45);
+      ft_plot_topo(chanx, chany, chanz, 'mask', laychan.mask, 'interplim', 'mask', 'outline', laychan.outline, 'tag', 'topography', 'hpos', laytopo.pos(laysel,1)-laytopo.width(laysel)/2, 'vpos', laytopo.pos(laysel,2)-laytopo.height(laysel)/2, 'width', laytopo.width(laysel), 'height', laytopo.height(laysel), 'gridscale', 45, 'isolines', cfg.contournum);
       
       %axis equal
       %drawnow
@@ -2148,37 +2155,7 @@ end % function redraw_cb
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function key = parseKeyboardEvent(eventdata)
-
-key = eventdata.Key;
-
-% handle possible numpad events (different for Windows and UNIX systems)
-% NOTE: shift+numpad number does not work on UNIX, since the shift
-% modifier is always sent for numpad events
-if isunix()
-  shiftInd = match_str(eventdata.Modifier, 'shift');
-  if ~isnan(str2double(eventdata.Character)) && ~isempty(shiftInd)
-    % now we now it was a numpad keystroke (numeric character sent AND
-    % shift modifier present)
-    key = eventdata.Character;
-    eventdata.Modifier(shiftInd) = []; % strip the shift modifier
-  end
-elseif ispc()
-  if strfind(eventdata.Key, 'numpad')
-    key = eventdata.Character;
-  end
-end
-
-if ~isempty(eventdata.Modifier)
-  key = [eventdata.Modifier{1} '+' key];
-end
-
-end % function parseKeyboardEvent
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% SUBFUNCTION
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function cursortext = datacursortext(obj, event_obj)
+function cursortext = cb_datacursortext(obj, event_obj)
 pos = get(event_obj, 'Position');
 
 linetype = getappdata(event_obj.Target, 'ft_databrowser_linetype');
@@ -2205,13 +2182,13 @@ else
   % y-axis do not correspond to real data values (both are between 0 and
   % 1 always)
 end
-end % function datacursortext
+end % function cb_datacursortext
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SUBFUNCTION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function winresize_cb(h,eventdata)
+function winresize_cb(h, eventdata)
 
 % check whether the current figure is the browser
 if get(0, 'currentFigure') ~= h
@@ -2225,4 +2202,4 @@ opt.changedchanflg = true; % trigger for redrawing channel labels and preparing 
 setappdata(h, 'opt', opt);
 redraw_cb(h,eventdata);
 
-end  % function datacursortext
+end % function winresize_cb
