@@ -145,11 +145,22 @@ if needhdr
   EDF.Transducer = char(fread(EDF.FILE.FID,[80,EDF.NS],'char')');
   EDF.PhysDim    = char(fread(EDF.FILE.FID,[ 8,EDF.NS],'char')');
   
-  EDF.PhysMin= str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.PhysMax= str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.DigMin = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
-  EDF.DigMax = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.PhysMin = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.PhysMax = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.DigMin  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
+  EDF.DigMax  = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));
   
+  % match physical and digital maximum numbers in case one erronously
+  % exedes the maximum number of channels.
+  lengthsScalings = [length(EDF.PhysMin) length(EDF.PhysMax) length(EDF.DigMin) length(EDF.DigMax)];
+  if (min(lengthsScalings) ~= max(lengthsScalings)) && (min(lengthsScalings) <= EDF.NS) && (max(lengthsScalings) > EDF.NS)
+      fprintf(2,'Warning OPENEDF: Failing to match numbers in Physical Minimum/Maximum and Digital Minimum/Maximum\n in the case that more values are given than number of signals in file\n will atempt to take the first matching ones.\n');
+      EDF.PhysMin = EDF.PhysMin(min(lengthsScalings));
+      EDF.PhysMax = EDF.PhysMax(min(lengthsScalings));
+      EDF.DigMin  = EDF.DigMin(min(lengthsScalings));
+      EDF.DigMax  = EDF.DigMax(min(lengthsScalings));
+  end
+
   % check validity of DigMin and DigMax
   if (length(EDF.DigMin) ~= EDF.NS)
     fprintf(2,'Warning OPENEDF: Failing Digital Minimum\n');
@@ -164,17 +175,19 @@ if needhdr
   end
   % check validity of PhysMin and PhysMax
   if (length(EDF.PhysMin) ~= EDF.NS)
-    fprintf(2,'Warning OPENEDF: Failing Physical Minimum\n');
+    fprintf(2,'Warning OPENEDF: Failing Physical Minimum, taking Digital Minimum instead\n');
     EDF.PhysMin = EDF.DigMin;
   end
   if (length(EDF.PhysMax) ~= EDF.NS)
-    fprintf(2,'Warning OPENEDF: Failing Physical Maximum\n');
+    fprintf(2,'Warning OPENEDF: Failing Physical Maximum, taking Digital Maximum instead\n');
     EDF.PhysMax = EDF.DigMax;
   end
-  if (any(EDF.PhysMin >= EDF.PhysMax))
-    fprintf(2,'Warning OPENEDF: Physical Minimum larger than Maximum\n');
-    EDF.PhysMin = EDF.DigMin;
-    EDF.PhysMax = EDF.DigMax;
+  idx_PhysMin_ge_PhysMax = EDF.PhysMin >= EDF.PhysMax;
+  if (any(idx_PhysMin_ge_PhysMax))
+    tmplabel = cellfun(@(x) [x ' '], cellstr(EDF.Label(idx_PhysMin_ge_PhysMax,:)),'UniformOutput',false)';
+    fprintf(2,['Warning OPENEDF: Physical Minimum larger than Maximum.\nPLEASE recheck if the scaling and polarity in the following channels are still correct if used:\n' tmplabel{:} '\n']);
+    %EDF.PhysMin = EDF.DigMin;
+    %EDF.PhysMax = EDF.DigMax;
   end
   EDF.PreFilt= char(fread(EDF.FILE.FID,[80,EDF.NS],'char')');
   EDF.SPR = str2num(char(fread(EDF.FILE.FID,[8,EDF.NS],'char')'));  % samples per data record
@@ -183,9 +196,9 @@ if needhdr
   
   EDF.Cal = (EDF.PhysMax-EDF.PhysMin)./(EDF.DigMax-EDF.DigMin);
   EDF.Off = EDF.PhysMin - EDF.Cal .* EDF.DigMin;
-  tmp = find(EDF.Cal < 0);
-  EDF.Cal(tmp) = ones(size(tmp));
-  EDF.Off(tmp) = zeros(size(tmp));
+  %tmp = find(EDF.Cal < 0);
+  %EDF.Cal(tmp) = ones(size(tmp));
+  %EDF.Off(tmp) = zeros(size(tmp));
   
   EDF.Calib=[EDF.Off';(diag(EDF.Cal))];
   %EDF.Calib=sparse(diag([1; EDF.Cal]));
@@ -277,7 +290,7 @@ if needhdr
     % continue with the subset of channels that has a consistent sampling frequency
     hdr.Fs           = EDF.SampleRate(chansel(1));
     hdr.nChans       = length(chansel);
-    ft_warning('Skipping "%s" as continuous data channel because of inconsistent sampling frequency (%g Hz)', deblank(EDF.Label(end,:)), EDF.SampleRate(end));
+    warning('Skipping "%s" as continuous data channel because of inconsistent sampling frequency (%g Hz)', deblank(EDF.Label(end,:)), EDF.SampleRate(end));
     hdr.label        = cellstr(EDF.Label(chansel,:));
     % it is continuous data, therefore append all records in one trial
     hdr.nSamples     = EDF.NRec * EDF.SPR(chansel(1));
@@ -312,7 +325,7 @@ if needhdr
     hdr.orig.chansel    = chansel;
     hdr.orig.annotation = find(strcmp(cellstr(hdr.orig.Label), 'EDF Annotations'));
     
-    ft_warning('channels with different sampling rate not supported, selecting subset of %d channels at %f Hz', length(hdr.label), hdr.Fs);
+    warning('channels with different sampling rate not supported, selecting subset of %d channels at %f Hz', length(hdr.label), hdr.Fs);
   end
   
   % return the header
@@ -433,20 +446,27 @@ end
 % SUBFUNCTION for reading the 16 bit values
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function buf = readLowLevel(filename, offset, numwords)
-if offset < 2*1024^2
+is_below_2GB = offset < 2*1024^2;
+read_16bit_success = true;
+if is_below_2GB
   % use the external mex file, only works for <2GB
+  try
   buf = read_16bit(filename, offset, numwords);
-else
+  catch e
+      read_16bit_success = false;
+  end
+end
+if ~is_below_2GB || ~read_16bit_success
   % use plain matlab, thanks to Philip van der Broek
   fp = fopen(filename,'r','ieee-le');
   status = fseek(fp, offset, 'bof');
   if status
-    ft_error(['failed seeking ' filename]);
+    error(['failed seeking ' filename]);
   end
   [buf,num] = fread(fp,numwords,'bit16=>double');
   fclose(fp);
   if (num<numwords)
-    ft_error(['failed reading ' filename]);
+    error(['failed reading ' filename]);
+    return
   end
 end
-

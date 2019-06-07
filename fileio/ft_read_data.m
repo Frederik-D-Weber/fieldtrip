@@ -1416,6 +1416,30 @@ switch dataformat
       dat = read_yokogawa_data(filename, hdr, begsample, endsample, chanindx);
     end
     
+  case 'zmax_edf'
+    % this reader is largely similar to the one for edf
+    % it concatenates edfs with fixed file names of identical length and
+    % sample rate with one channel each, all in the same folder. 
+    % the chanindx represents the alphabetical order of the edf filnames in
+    % that folder.
+    
+    if isempty(chanindx)
+        chanindx = 1:numel(hdr.label);
+    end
+    
+    if max(chanindx) > hdr.nChans
+        ft_error('FILEIO:InvalidChanIndx', 'selected channels are not present in the data');
+    else
+        channelLabels = hdr.label(chanindx);
+        dat = [];
+        for iCh = 1:numel(channelLabels)
+            channelLabel = channelLabels{iCh};
+            [path,~,ext] = fileparts(filename);
+            dat = cat(1,dat, ...
+                read_edf(fullfile(path, [channelLabel ext]), hdr, begsample, endsample, 1));
+        end
+    end
+    
   case 'blackrock_nsx'
     % use the NPMK toolbox for the file reading
     ft_hastoolbox('NPMK', 1);

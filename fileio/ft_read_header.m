@@ -60,6 +60,7 @@ function [hdr] = ft_read_header(filename, varargin)
 %   EGI - Electrical Geodesics, Inc. (*.egis, *.ave, *.gave, *.ses, *.raw, *.sbin, *.mff)
 %   GTec (*.mat, *.hdf5)
 %   Generic data formats (*.edf, *.gdf)
+%   Hypnodyne Corp. ZMax (*.edf ... *.edf)
 %   Megis/BESA (*.avr, *.swf, *.besa)
 %   NeuroScan (*.eeg, *.cnt, *.avg)
 %   Nexstim (*.nxe)
@@ -2475,6 +2476,64 @@ switch headerformat
   case 'videomeg_vid'
     hdr = read_videomeg_vid(filename);
     checkUniqueLabels = false;
+    
+  case 'zmax_edf'
+    % this reader is largely similar to the one for edf
+    % it gets the header of one of the edfs in the same folder 
+    % with fixed file names of identical length and sample rate 
+    % with one channel each, all in the same folder. 
+    % the chanindx represents the alphabetical order of the edf filnames in
+    % that folder.
+    
+    [path,~,ext] = fileparts(filename);
+    
+    checkChannelFileNames = {'BATT', ...
+         'BODY TEMP', ...
+         'dX', ...
+         'dY', ...
+         'dZ', ...
+         'EEG L', ...
+         'EEG R', ...
+         'LIGHT', ...
+         'NASAL L', ...
+         'NASAL R', ...
+         'NOISE', ...
+         'OXY_DARK_AC', ...
+         'OXY_DARK_DC', ...
+         'OXY_IR_AC', ...
+         'OXY_IR_DC', ...
+         'OXY_R_AC', ...
+         'OXY_R_DC', ...
+         'RSSI'};
+     
+     % check which of the channels are present in the same folder
+     testChannelFileNameIndex = [];
+     hdrs = {};
+     for iTestChannelFileName = 1:numel(checkChannelFileNames)
+         checkFilename = fullfile(path, [checkChannelFileNames{iTestChannelFileName} '.edf']);
+         if exist(checkFilename, 'file')
+             hdrs{iTestChannelFileName} = read_edf(checkFilename);
+           % hdr = read_edf(filename,[],1);
+             testChannelFileNameIndex = cat(1,testChannelFileNameIndex,iTestChannelFileName);
+         end
+     end
+     hdrs = hdrs(testChannelFileNameIndex);
+     existingChannelFileNames = checkChannelFileNames(testChannelFileNameIndex);
+     %preload a header
+     hdr = read_edf(filename);
+
+     hdr.nChans = numel(existingChannelFileNames);
+     if hdr.nChans > 1
+         hdr.label = cell(size(existingChannelFileNames'));
+         hdr.chantype = cell(size(hdr.label));
+         hdr.chanunit = cell(size(hdr.label));
+
+         for iHdr = 1:numel(hdrs)
+             hdr.label{iHdr} = hdrs{iHdr}.label{1};
+             hdr.chantype{iHdr} = hdrs{iHdr}.chantype{1};
+             hdr.chanunit{iHdr} = hdrs{iHdr}.chanunit{1};
+         end
+     end
     
   otherwise
     % attempt to run headerformat as a function
