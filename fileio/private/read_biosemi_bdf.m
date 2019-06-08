@@ -1,4 +1,4 @@
-
+function dat = read_biosemi_bdf(filename, hdr, begsample, endsample, chanindx)
 % READ_BIOSEMI_BDF reads specified samples from a BDF continuous datafile
 % It neglects all trial boundaries as if the data was acquired in
 % non-continuous mode.
@@ -25,7 +25,8 @@
 %    endsample       index of the last sample to read
 %    chanindx        index of channels to read (optional, default is all)
 % This returns a Nchans X Nsamples data matrix
-
+%
+% Copyright (C) 2006-2017, Robert Oostenveld
 %
 % This file is part of FieldTrip, see http://www.fieldtriptoolbox.org
 % for the documentation and details.

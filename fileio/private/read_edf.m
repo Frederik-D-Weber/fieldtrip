@@ -286,7 +286,7 @@ if needhdr
     % continue with the subset of channels that has a consistent sampling frequency
     hdr.Fs           = EDF.SampleRate(chansel(1));
     hdr.nChans       = length(chansel);
-    warning('Skipping "%s" as continuous data channel because of inconsistent sampling frequency (%g Hz)', deblank(EDF.Label(end,:)), EDF.SampleRate(end));
+    ft_warning('Skipping "%s" as continuous data channel because of inconsistent sampling frequency (%g Hz)', deblank(EDF.Label(end,:)), EDF.SampleRate(end));
     hdr.label        = cellstr(EDF.Label(chansel,:));
     % it is continuous data, therefore append all records in one trial
     hdr.nSamples     = EDF.NRec * EDF.SPR(chansel(1));
